@@ -55,6 +55,10 @@
 #include "parsid.h"
 #endif
 
+#ifdef HAVE_EXSID
+#include "exsid.h"
+#endif
+
 static char *sid2_address_range = NULL;
 static char *sid3_address_range = NULL;
 static char *sid4_address_range = NULL;
@@ -118,6 +122,12 @@ static const struct engine_s engine_match[] = {
     { "par", SID_PARSID },
     { "lpt", SID_PARSID },
 #endif
+#endif
+#ifdef HAVE_EXSID
+    { "1536", SID_EXSID },
+    { "exsid", SID_EXSID },
+    { "ex", SID_EXSID },
+    { "es", SID_EXSID },
 #endif
     { NULL, -1 }
 };
@@ -375,6 +385,15 @@ static char *build_sid_cmdline_option(int sid_type)
         old = new;
     }
 #endif
+#endif
+
+#ifdef HAVE_EXSID
+    /* add ssi2001 options if available */
+    if (exsid_available()) {
+        new = util_concat(old, ", 1536: EXSID", NULL);
+        lib_free(old);
+        old = new;
+    }
 #endif
 
     /* add ending bracket */
