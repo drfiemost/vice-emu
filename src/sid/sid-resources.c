@@ -44,6 +44,10 @@
 #include "sound.h"
 #include "types.h"
 
+#ifdef HAVE_EXSID
+#include "exsid.h"
+#endif
+
 /* Resource handling -- Added by Ettore 98-04-26.  */
 
 /* FIXME: We need sanity checks!  And do we really need all of these
@@ -555,6 +559,13 @@ static sid_engine_model_t sid_engine_models_parsid[] = {
 #endif
 #endif
 
+#ifdef HAVE_EXSID
+static sid_engine_model_t sid_engine_models_exsid[] = {
+    { "exSID", SID_EXSID },
+    { NULL, -1 }
+};
+#endif
+
 static void add_sid_engine_models(sid_engine_model_t *sid_engine_models)
 {
     int i = 0;
@@ -601,6 +612,12 @@ sid_engine_model_t **sid_get_engine_model_list(void)
         add_sid_engine_models(sid_engine_models_parsid);
     }
 #endif
+#endif
+
+#ifdef HAVE_EXSID
+    if (exsid_available()) {
+        add_sid_engine_models(sid_engine_models_exsid);
+    }
 #endif
 
     sid_engine_model_list[num_sid_engine_models] = NULL;

@@ -28,6 +28,7 @@ noinst_LIBRARIES = libsid.a libsid_dtv.a
 
 libsid_a_SOURCES = \
 	catweaselmkiii.c \
+	exsid.c \
 	fastsid.c \
 	fastsid.h \
 	hardsid.c \
