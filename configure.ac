@@ -2942,6 +2942,13 @@ if test x"$is_unix" = "xyes"; then
     AC_CHECK_HEADERS(unistd.h sys/io.h machine/pio.h machine/cpufunc.h)
     AC_CHECK_HEADERS(pci/pci.h,,[PCIUTILS_HEADER_PRESENT=no],)
 
+    PKG_CHECK_MODULES([EXSID],[libexsid >= 2.0],
+        [AC_DEFINE([HAVE_EXSID], 1, [Define to 1 if you have libexsid (-lexsid).])],
+        [AC_MSG_WARN([$EXSID_PKG_ERRORS])]
+    )
+    VICE_CFLAGS="$VICE_CFLAGS $EXSID_CFLAGS";
+    LIBS="$LIBS $EXSID_LIBS"
+
     if test x"$PCIUTILS_HEADER_PRESENT" = "xyes"; then
       AC_CHECK_LIB(pciutils, pci_fill_info,[LIBS="-lpciutils $LIBS"; PCIUTILS_LIB_PRESENT=yes],,)
       if test x"$PCIUTILS_LIB_PRESENT" = "xno"; then

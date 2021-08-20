@@ -119,6 +119,9 @@ static int set_sid_engine(int set_engine, void *param)
         case SID_ENGINE_PARSID:
 #endif
 #endif
+#ifdef HAVE_EXSID
+        case SID_ENGINE_EXSID:
+#endif
             break;
         default:
             return -1;
@@ -632,6 +635,7 @@ static int sid_check_engine_model(int engine, int model)
         case SID_ENGINE_CATWEASELMKIII:
         case SID_ENGINE_HARDSID:
         case SID_ENGINE_PARSID:
+        case SID_ENGINE_EXSID:
             return 0;
         default:
             break;

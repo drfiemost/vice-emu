@@ -30,8 +30,10 @@
 
 #include <string.h>
 
-#include "exSID.h"
+#include <exSID.h>
+
 #include "sid-snapshot.h"
+#include "exsid.h"
 #include "types.h"
 
 #define MAX_EXSID_SID 1
@@ -48,7 +50,7 @@ static long sid_cycles;
 static int exsid_is_open = -1;
 
 /* exSID device */
-static void* exsidfd = NUL;
+static void* exsidfd = NULL;
 
 int exsid_open(void)
 {
@@ -71,7 +73,7 @@ int exsid_close(void)
         exsidfd = NULL;
         exsid_is_open = -1;
     }
-    return retval;
+    return 0;
 }
 
 int exsid_read(uint16_t addr, int chipno)
@@ -82,7 +84,7 @@ int exsid_read(uint16_t addr, int chipno)
             return sidbuf[addr];
         }
         uint8_t val;
-        exSID_clkdread(exsidfd, SIDWRITEDELAY, addr, val);
+        exSID_clkdread(exsidfd, sid_cycles, addr, &val);
         return val;
     }
 
@@ -96,23 +98,23 @@ void exsid_store(uint16_t addr, uint8_t val, int chipno)
         if (addr <= 0x18) {
             sidbuf[addr] = val;
         }
-        exSID_clkdwrite(exsidfd, SIDWRITEDELAY, addr, val);
+        exSID_clkdwrite(exsidfd, sid_cycles, addr, val);
     }
 }
 
 void exsid_set_machine_parameter(long cycles_per_sec)
 {
-    sid_cycles = cycles_per_sec;
-    sid_ntsc = (uint8_t)((cycles_per_sec <= 1000000) ? 0 : 1);
-    int ret = exSID_clockselect(exsidfd, sid_ntsc ? XS_CL_NTSC : XS_CL_PAL);
-    //exsid_drv_set_machine_parameter(cycles_per_sec);
+    if (exsid_is_open != -1) {
+        sid_cycles = cycles_per_sec;
+        sid_ntsc = (uint8_t)((cycles_per_sec <= 1000000) ? 0 : 1);
+        int ret = exSID_clockselect(exsidfd, sid_ntsc ? XS_CL_NTSC : XS_CL_PAL);
+        //exsid_drv_set_machine_parameter(cycles_per_sec);
+    }
 }
 
 int exsid_available(void)
 {
-    if (exsid_is_open) {
-        exsid_open();
-    }
+    exsid_open();
 
     if (!exsid_is_open) {
         return 1; //FIXME
@@ -140,7 +142,7 @@ void exsid_state_write(int chipno, struct sid_hs_snapshot_state_s *sid_state)
     if (chipno < MAX_EXSID_SID) {
         for (i = 0; i < 32; ++i) {
             sidbuf[i] = sid_state->regs[i];
-            exSID_clkdwrite(exsidfd, SIDWRITEDELAY, i, sid_state->regs[i]);
+            exSID_clkdwrite(exsidfd, sid_cycles, i, sid_state->regs[i]);
         }
     }
 }

@@ -388,7 +388,7 @@ static char *build_sid_cmdline_option(int sid_type)
 #endif
 
 #ifdef HAVE_EXSID
-    /* add ssi2001 options if available */
+    /* add exsid options if available */
     if (exsid_available()) {
         new = util_concat(old, ", 1536: EXSID", NULL);
         lib_free(old);
