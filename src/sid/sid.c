@@ -48,6 +48,7 @@
 #include "sid-snapshot.h"
 #include "sid.h"
 #include "sound.h"
+#include "exsid.h"
 #include "types.h"
 
 #ifdef HAVE_MOUSE
@@ -962,6 +963,10 @@ int sid_sound_machine_cycle_based(void)
             return 0;
 #endif
 #endif
+#ifdef HAVE_EXSID
+        case SID_ENGINE_EXSID:
+            return 0;
+#endif
     }
 
     return 0;
@@ -1013,6 +1018,13 @@ static void set_sound_func(void)
             sid_dump_func = NULL; /* TODO: parsid dump */
         }
 #endif
+#endif
+#ifdef HAVE_EXSID
+        if (sid_engine_type == SID_ENGINE_EXSID) {
+            sid_read_func = exsid_read;
+            sid_store_func = exsid_store;
+            sid_dump_func = NULL; /* TODO: exsid dump */
+        }
 #endif
     } else {
         sid_read_func = sid_read_off;
@@ -1068,6 +1080,18 @@ int sid_engine_set(int engine)
     }
 #endif
 #endif
+#ifdef HAVE_EXSID
+    if (engine == SID_ENGINE_EXSID
+        && sid_engine_type != SID_ENGINE_EXSID) {
+        if (exsid_open() < 0) {
+            return -1;
+        }
+    }
+    if (engine != SID_ENGINE_EXSID
+        && sid_engine_type == SID_ENGINE_EXSID) {
+        exsid_close();
+    }
+#endif
 
     sid_engine_type = engine;
 
@@ -1105,6 +1129,9 @@ void sid_set_machine_parameter(long clock_rate)
 #ifdef HAVE_HARDSID
     hardsid_set_machine_parameter(clock_rate);
 #endif
+#ifdef HAVE_EXSID
+    exsid_set_machine_parameter(clock_rate);
+#endif
 }
 
 
@@ -1132,6 +1159,8 @@ int sid_engine_get_max_sids(int engine)
         case SID_ENGINE_PARSID:
             return SID_ENGINE_PARSID_NUM_SIDS;
 #endif
+        case SID_ENGINE_EXSID:
+            return SID_ENGINE_EXSID_NUM_SIDS;
         default:
             /* unknow engine */
             return -1;
