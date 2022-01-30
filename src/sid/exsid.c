@@ -38,14 +38,11 @@
 
 #define MAX_EXSID_SID 1
 
-
 /* buffer containing current register state of SIDs */
 static uint8_t sidbuf[0x20];
 
 /* 0 = pal, !0 = ntsc */
 static uint8_t sid_ntsc = 0;
-
-static long sid_cycles;
 
 static int exsid_is_open = -1;
 
@@ -56,6 +53,8 @@ int exsid_open(void)
 {
     if (exsid_is_open == -1) {
         exsidfd = exSID_new();
+        if (!exsidfd)
+            return -1;
         exsid_is_open = exSID_init(exsidfd);
         memset(sidbuf, 0, sizeof(sidbuf));
     }
@@ -84,7 +83,7 @@ int exsid_read(uint16_t addr, int chipno)
             return sidbuf[addr];
         }
         uint8_t val;
-        exSID_clkdread(exsidfd, sid_cycles, addr, &val);
+        exSID_clkdread(exsidfd, 0, addr, &val);
         return val;
     }
 
@@ -98,17 +97,23 @@ void exsid_store(uint16_t addr, uint8_t val, int chipno)
         if (addr <= 0x18) {
             sidbuf[addr] = val;
         }
-        exSID_clkdwrite(exsidfd, sid_cycles, addr, val);
+        exSID_clkdwrite(exsidfd, 0, addr, val);
     }
 }
 
 void exsid_set_machine_parameter(long cycles_per_sec)
 {
     if (exsid_is_open != -1) {
-        sid_cycles = cycles_per_sec;
+        //exSID_audio_op(exsidfd, XS_AU_8580_8580); // mutes output
+        //exSID_chipselect(exsidfd, XS_CS_CHIP1);
+
         sid_ntsc = (uint8_t)((cycles_per_sec <= 1000000) ? 0 : 1);
         int ret = exSID_clockselect(exsidfd, sid_ntsc ? XS_CL_NTSC : XS_CL_PAL);
         //exsid_drv_set_machine_parameter(cycles_per_sec);
+        //exSID_audio_op(exsidfd, XS_AU_UNMUTE);
+
+        //exSID_reset(exsidfd);
+        //exSID_clkdwrite(exsidfd, 0, 0x18, 0x0f);    // this will offset the internal clock
     }
 }
 
@@ -142,7 +147,7 @@ void exsid_state_write(int chipno, struct sid_hs_snapshot_state_s *sid_state)
     if (chipno < MAX_EXSID_SID) {
         for (i = 0; i < 32; ++i) {
             sidbuf[i] = sid_state->regs[i];
-            exSID_clkdwrite(exsidfd, sid_cycles, i, sid_state->regs[i]);
+            exSID_clkdwrite(exsidfd, 0, i, sid_state->regs[i]);
         }
     }
 }
