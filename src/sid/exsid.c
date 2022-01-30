@@ -32,32 +32,79 @@
 
 #include <exSID.h>
 
-#include "sid-snapshot.h"
+#include "alarm.h"
 #include "exsid.h"
+#include "log.h"
+#include "maincpu.h"
+#include "sid-snapshot.h"
 #include "types.h"
 
 #define MAX_EXSID_SID 1
 
+/* Approx 3 PAL screen updates */
+#define EXSID_DELAY_CYCLES 50000
+
+//#include <stdio.h>
+
 /* buffer containing current register state of SIDs */
 static uint8_t sidbuf[0x20];
-
-/* 0 = pal, !0 = ntsc */
-static uint8_t sid_ntsc = 0;
 
 static int exsid_is_open = -1;
 
 /* exSID device */
 static void* exsidfd = NULL;
 
+static CLOCK exsid_main_clk;
+static CLOCK exsid_alarm_clk;
+static alarm_t *exsid_alarm = 0;
+
+static void exsid_alarm_handler(CLOCK offset, void *data);
+
+void exsid_reset(void)
+{
+    if (!exsid_is_open) {
+        exsid_main_clk  = maincpu_clk;
+        exsid_alarm_clk = EXSID_DELAY_CYCLES;
+        alarm_set(exsid_alarm, EXSID_DELAY_CYCLES);
+    }
+}
+
+const char* get_model_string(int model) {
+    switch (model) {
+        case XS_MD_STD:
+            return "exSID USB";
+        case XS_MD_PLUS:
+            return "exSID+ USB";
+        default:
+            return "unknown";
+    }      
+}
+
 int exsid_open(void)
 {
     if (exsid_is_open == -1) {
         exsidfd = exSID_new();
-        if (!exsidfd)
+        if (!exsidfd) {
+            log_error(LOG_DEFAULT, "Error allocating exSID structure.\n");
             return -1;
+        }
         exsid_is_open = exSID_init(exsidfd);
+        if (exsid_is_open) {
+            log_error(LOG_DEFAULT, "exSID init error: %s\n", exSID_error_str(exsidfd));
+            exSID_free(exsidfd);
+            exsidfd = NULL;
+            exsid_is_open = -1;
+        }
         memset(sidbuf, 0, sizeof(sidbuf));
+
+        int model = exSID_hwmodel(exsidfd);
+        if (model >= 0)
+            log_message(LOG_DEFAULT, "exSID model: %s\n", get_model_string(model));
+
+        exsid_alarm = alarm_new(maincpu_alarm_context, "exsid", exsid_alarm_handler, 0);
     }
+    exsid_reset();
+    log_message(LOG_DEFAULT, "exSID: opened.");
 
     return exsid_is_open;
 }
@@ -71,6 +118,10 @@ int exsid_close(void)
         exSID_free(exsidfd);
         exsidfd = NULL;
         exsid_is_open = -1;
+        alarm_destroy(exsid_alarm);
+        exsid_alarm = 0;
+
+        log_message(LOG_DEFAULT, "exSID: closed.");
     }
     return 0;
 }
@@ -78,12 +129,28 @@ int exsid_close(void)
 int exsid_read(uint16_t addr, int chipno)
 {
     if (!exsid_is_open && chipno < MAX_EXSID_SID) {
+
+        CLOCK cycles = maincpu_clk - exsid_main_clk - 1;
+        exsid_main_clk = maincpu_clk;
+
+        //printf("exsid_read %x (%d)\n", addr, cycles);
+
+        while (cycles > 0xffff) {
+            /* delay */
+            exSID_delay(exsidfd, 0xffff);
+            cycles -= 0xffff;
+        }
+
         /* use sidbuf[] for write-only registers */
         if (addr <= 0x18) {
+            exSID_delay(exsidfd, cycles);
             return sidbuf[addr];
         }
+
         uint8_t val;
-        exSID_clkdread(exsidfd, 0, addr, &val);
+        int ret = exSID_clkdread(exsidfd, cycles, addr, &val);
+        if (ret<0)
+            log_error(LOG_DEFAULT, "exsid read error\n");
         return val;
     }
 
@@ -93,23 +160,37 @@ int exsid_read(uint16_t addr, int chipno)
 void exsid_store(uint16_t addr, uint8_t val, int chipno)
 {
     if (!exsid_is_open && chipno < MAX_EXSID_SID) {
+
+        CLOCK cycles = maincpu_clk - exsid_main_clk - 1;
+        exsid_main_clk = maincpu_clk;
+
+        //printf("exsid_store %x, %x (%d)\n", addr, val, cycles);
+
         /* write to sidbuf[] for write-only registers */
         if (addr <= 0x18) {
             sidbuf[addr] = val;
         }
-        exSID_clkdwrite(exsidfd, 0, addr, val);
+        
+        while (cycles > 0xffff) {
+            /* delay */
+            exSID_delay(exsidfd, 0xffff);
+            cycles -= 0xffff;
+        }
+        int ret = exSID_clkdwrite(exsidfd, cycles, addr, val);
+        if (ret<0)
+            log_error(LOG_DEFAULT, "exsid write error\n");
     }
 }
 
 void exsid_set_machine_parameter(long cycles_per_sec)
 {
     if (exsid_is_open != -1) {
-        //exSID_audio_op(exsidfd, XS_AU_8580_8580); // mutes output
-        //exSID_chipselect(exsidfd, XS_CS_CHIP1);
+        //exSID_audio_op(exsidfd, XS_AU_6581_6581); // mutes output
+        exSID_chipselect(exsidfd, XS_CS_CHIP0); // FIXME
 
-        sid_ntsc = (uint8_t)((cycles_per_sec <= 1000000) ? 0 : 1);
-        int ret = exSID_clockselect(exsidfd, sid_ntsc ? XS_CL_NTSC : XS_CL_PAL);
-        //exsid_drv_set_machine_parameter(cycles_per_sec);
+        // only for exSID+
+        //int sid_ntsc = (cycles_per_sec <= 1000000) ? 0 : 1;
+        //int ret = exSID_clockselect(exsidfd, sid_ntsc ? XS_CL_NTSC : XS_CL_PAL);
         //exSID_audio_op(exsidfd, XS_AU_UNMUTE);
 
         //exSID_reset(exsidfd);
@@ -125,6 +206,21 @@ int exsid_available(void)
         return 1; //FIXME
     }
     return 0;
+}
+
+static void exsid_alarm_handler(CLOCK offset, void *data)
+{
+    CLOCK cycles = (exsid_alarm_clk + offset) - exsid_main_clk;
+
+    if (cycles < EXSID_DELAY_CYCLES) {
+        exsid_alarm_clk = exsid_main_clk + EXSID_DELAY_CYCLES;
+    } else {
+        int delay = (int) cycles;
+        exSID_delay(exsidfd, delay);
+        exsid_main_clk   = maincpu_clk - offset;
+        exsid_alarm_clk  = exsid_main_clk + EXSID_DELAY_CYCLES;
+    }
+    alarm_set(exsid_alarm, exsid_alarm_clk);
 }
 
 /* ---------------------------------------------------------------------*/
