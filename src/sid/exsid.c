@@ -36,6 +36,7 @@
 #include "exsid.h"
 #include "log.h"
 #include "maincpu.h"
+#include "resources.h"
 #include "sid-snapshot.h"
 #include "types.h"
 
@@ -50,6 +51,8 @@
 static uint8_t sidbuf[0x20];
 
 static int exsid_is_open = -1;
+
+static int exsid_model = -1;
 
 /* exSID device */
 static void* exsidfd = NULL;
@@ -69,7 +72,7 @@ void exsid_reset(void)
     }
 }
 
-const char* get_model_string(int model) {
+static const char* get_model_string(int model) {
     switch (model) {
         case XS_MD_STD:
             return "exSID USB";
@@ -82,6 +85,8 @@ const char* get_model_string(int model) {
 
 int exsid_open(void)
 {
+    uint16_t version;
+
     if (exsid_is_open == -1) {
         exsidfd = exSID_new();
         if (!exsidfd) {
@@ -94,12 +99,16 @@ int exsid_open(void)
             exSID_free(exsidfd);
             exsidfd = NULL;
             exsid_is_open = -1;
+            return -1;
         }
         memset(sidbuf, 0, sizeof(sidbuf));
 
-        int model = exSID_hwmodel(exsidfd);
-        if (model >= 0)
-            log_message(LOG_DEFAULT, "exSID model: %s\n", get_model_string(model));
+        exsid_model = exSID_hwmodel(exsidfd);
+        if (exsid_model >= 0) {
+            version = exSID_hwversion(exsidfd);
+            log_message(LOG_DEFAULT, "exSID model: %s rev %c firmware version %d\n",
+                        get_model_string(exsid_model), (char)(version>>8), (version & 0xff));
+        }
 
         exsid_alarm = alarm_new(maincpu_alarm_context, "exsid", exsid_alarm_handler, 0);
     }
@@ -111,7 +120,7 @@ int exsid_open(void)
 
 int exsid_close(void)
 {
-    if (exsid_is_open != -1) {
+    if (!exsid_is_open) {
         exSID_audio_op(exsidfd, XS_AU_MUTE);
         exSID_exit(exsidfd);
 
@@ -128,6 +137,8 @@ int exsid_close(void)
 
 int exsid_read(uint16_t addr, int chipno)
 {
+    uint8_t val;
+
     if (!exsid_is_open && chipno < MAX_EXSID_SID) {
 
         CLOCK cycles = maincpu_clk - exsid_main_clk - 1;
@@ -147,9 +158,7 @@ int exsid_read(uint16_t addr, int chipno)
             return sidbuf[addr];
         }
 
-        uint8_t val;
-        int ret = exSID_clkdread(exsidfd, cycles, addr, &val);
-        if (ret<0)
+        if (exSID_clkdread(exsidfd, cycles, addr, &val) < 0)
             log_error(LOG_DEFAULT, "exsid read error\n");
         return val;
     }
@@ -176,22 +185,32 @@ void exsid_store(uint16_t addr, uint8_t val, int chipno)
             exSID_delay(exsidfd, 0xffff);
             cycles -= 0xffff;
         }
-        int ret = exSID_clkdwrite(exsidfd, cycles, addr, val);
-        if (ret<0)
+
+        if (exSID_clkdwrite(exsidfd, cycles, addr, val) < 0)
             log_error(LOG_DEFAULT, "exsid write error\n");
     }
 }
 
 void exsid_set_machine_parameter(long cycles_per_sec)
 {
-    if (exsid_is_open != -1) {
-        //exSID_audio_op(exsidfd, XS_AU_6581_6581); // mutes output
-        exSID_chipselect(exsidfd, XS_CS_CHIP0); // FIXME
+    int sid_model = 0;
+    int sid_ntsc;
+
+    if (!exsid_is_open) {
+        // FIXME not updated on changes
+        if (resources_get_int("SidModel", &sid_model) < 0) {
+            log_error(LOG_DEFAULT, "exsid: can't retrieve SidModel\n");
+        }
+
+        exSID_chipselect(exsidfd, sid_model == 0 ? XS_CS_CHIP0 : XS_CS_CHIP1);
 
         // only for exSID+
-        //int sid_ntsc = (cycles_per_sec <= 1000000) ? 0 : 1;
-        //int ret = exSID_clockselect(exsidfd, sid_ntsc ? XS_CL_NTSC : XS_CL_PAL);
-        //exSID_audio_op(exsidfd, XS_AU_UNMUTE);
+        if (exsid_model == XS_MD_PLUS) {
+            exSID_audio_op(exsidfd, sid_model == 0 ? XS_AU_6581_6581 : XS_AU_8580_8580);
+            sid_ntsc = (cycles_per_sec <= 1000000) ? 0 : 1;
+            exSID_clockselect(exsidfd, sid_ntsc ? XS_CL_NTSC : XS_CL_PAL);
+            exSID_audio_op(exsidfd, XS_AU_UNMUTE);
+        }
 
         //exSID_reset(exsidfd);
         //exSID_clkdwrite(exsidfd, 0, 0x18, 0x0f);    // this will offset the internal clock
@@ -203,7 +222,7 @@ int exsid_available(void)
     exsid_open();
 
     if (!exsid_is_open) {
-        return 1; //FIXME
+        return 1;
     }
     return 0;
 }

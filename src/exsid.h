@@ -36,7 +36,7 @@ extern int exsid_read(uint16_t addr, int chipno);
 extern void exsid_store(uint16_t addr, uint8_t val, int chipno);
 extern void exsid_set_machine_parameter(long cycles_per_sec);
 extern void exsid_set_device(unsigned int chipno, unsigned int device);
-
+/*
 extern int exsid_drv_open(void);
 extern int exsid_drv_close(void);
 extern void exsid_drv_reset(void);
@@ -44,12 +44,13 @@ extern int exsid_drv_read(uint16_t addr, int chipno);
 extern void exsid_drv_store(uint16_t addr, uint8_t val, int chipno);
 extern int exsid_drv_available(void);
 extern void exsid_drv_set_device(unsigned int chipno, unsigned int device);
-
+*/
 extern void exsid_state_read(int chipno, struct sid_hs_snapshot_state_s *sid_state);
 extern void exsid_state_write(int chipno, struct sid_hs_snapshot_state_s *sid_state);
-
+/*
 extern void exsid_drv_state_read(int chipno, struct sid_hs_snapshot_state_s *sid_state);
 extern void exsid_drv_state_write(int chipno, struct sid_hs_snapshot_state_s *sid_state);
+*/
 #endif
 
 extern int exsid_available(void);
