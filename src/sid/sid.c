@@ -72,6 +72,7 @@ static uint8_t siddata[SOUND_SIDS_MAX][32];
 static int (*sid_read_func)(uint16_t addr, int chipno);
 static void (*sid_store_func)(uint16_t addr, uint8_t val, int chipno);
 static int (*sid_dump_func)(int chipno);
+static int (*sid_close_func)(void);
 
 static int sid_enable, sid_engine_type = -1;
 
@@ -580,6 +581,8 @@ int sid_sound_machine_init(sound_t *psid, int speed, int cycles_per_sec)
 void sid_sound_machine_close(sound_t *psid)
 {
     sid_engine.close(psid);
+    if (sid_close_func)
+        sid_close_func();
 #ifndef SOUND_SYSTEM_FLOAT
     /* free the temp. buffers */
     if (buf1) {
@@ -988,12 +991,14 @@ static void set_sound_func(void)
             sid_read_func = sound_read;
             sid_store_func = sound_store;
             sid_dump_func = sound_dump;
+            sid_close_func = NULL;
         }
 #ifdef HAVE_RESID
         if (sid_engine_type == SID_ENGINE_RESID) {
             sid_read_func = sound_read;
             sid_store_func = sound_store;
             sid_dump_func = sound_dump;
+            sid_close_func = NULL;
         }
 #endif
 #ifdef HAVE_CATWEASELMKIII
@@ -1001,6 +1006,7 @@ static void set_sound_func(void)
             sid_read_func = catweaselmkiii_read;
             sid_store_func = catweaselmkiii_store;
             sid_dump_func = NULL; /* TODO: catweasel dump */
+            sid_close_func = catweaselmkiii_close;
         }
 #endif
 #ifdef HAVE_HARDSID
@@ -1008,6 +1014,7 @@ static void set_sound_func(void)
             sid_read_func = hardsid_read;
             sid_store_func = hardsid_store;
             sid_dump_func = NULL; /* TODO: hardsid dump */
+            sid_close_func = hardsid_close;
         }
 #endif
 #ifdef HAVE_PARSID
@@ -1016,6 +1023,7 @@ static void set_sound_func(void)
             sid_read_func = parsid_read;
             sid_store_func = parsid_store;
             sid_dump_func = NULL; /* TODO: parsid dump */
+            sid_close_func = parsid_close;
         }
 #endif
 #endif
@@ -1024,12 +1032,14 @@ static void set_sound_func(void)
             sid_read_func = exsid_read;
             sid_store_func = exsid_store;
             sid_dump_func = NULL; /* TODO: exsid dump */
+            sid_close_func = exsid_close;
         }
 #endif
     } else {
         sid_read_func = sid_read_off;
         sid_store_func = sid_write_off;
         sid_dump_func = NULL;
+        sid_close_func = NULL;
     }
 }
 
