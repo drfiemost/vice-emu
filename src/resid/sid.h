@@ -223,7 +223,11 @@ void SID::clock()
   }
 
   // Clock filter.
-  filter.clock(voice[0].output(), voice[1].output(), voice[2].output());
+  Filter::voices_t v;
+  v.voice1 = voice[0].output();
+  v.voice2 = voice[1].output();
+  v.voice3 = voice[2].output();
+  filter.clock(v);
 
   // Clock external filter.
   extfilt.clock(filter.output());

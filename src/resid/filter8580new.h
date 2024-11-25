@@ -527,6 +527,13 @@ struct mixer_offset<0>
 class Filter
 {
 public:
+    typedef struct {
+        int voice1;
+        int voice2;
+        int voice3;
+    } voices_t;
+
+public:
   Filter();
 
   void enable_filter(bool enable);
@@ -534,8 +541,8 @@ public:
   void set_chip_model(chip_model model);
   void set_voice_mask(reg4 mask);
 
-  void clock(int voice1, int voice2, int voice3);
-  void clock(cycle_count delta_t, int voice1, int voice2, int voice3);
+  void clock(voices_t v);
+  void clock(cycle_count delta_t, voices_t v);
   void reset();
 
   // Write registers.
@@ -663,13 +670,13 @@ friend class SID;
 // SID clocking - 1 cycle.
 // ----------------------------------------------------------------------------
 RESID_INLINE
-void Filter::clock(int voice1, int voice2, int voice3)
+void Filter::clock(voices_t v)
 {
   model_filter_t& f = model_filter[sid_model];
 
-  v1 = (voice1*f.voice_scale_s14 >> 18) + f.voice_DC;
-  v2 = (voice2*f.voice_scale_s14 >> 18) + f.voice_DC;
-  v3 = (voice3*f.voice_scale_s14 >> 18) + f.voice_DC;
+  v1 = (v.voice1*f.voice_scale_s14 >> 18) + f.voice_DC;
+  v2 = (v.voice2*f.voice_scale_s14 >> 18) + f.voice_DC;
+  v3 = (v.voice3*f.voice_scale_s14 >> 18) + f.voice_DC;
 
   // Sum inputs routed into the filter.
   int Vi = 0;
@@ -764,13 +771,13 @@ void Filter::clock(int voice1, int voice2, int voice3)
 // SID clocking - delta_t cycles.
 // ----------------------------------------------------------------------------
 RESID_INLINE
-void Filter::clock(cycle_count delta_t, int voice1, int voice2, int voice3)
+void Filter::clock(cycle_count delta_t, voices_t v)
 {
   model_filter_t& f = model_filter[sid_model];
 
-  v1 = (voice1*f.voice_scale_s14 >> 18) + f.voice_DC;
-  v2 = (voice2*f.voice_scale_s14 >> 18) + f.voice_DC;
-  v3 = (voice3*f.voice_scale_s14 >> 18) + f.voice_DC;
+  v1 = (v.voice1*f.voice_scale_s14 >> 18) + f.voice_DC;
+  v2 = (v.voice2*f.voice_scale_s14 >> 18) + f.voice_DC;
+  v3 = (v.voice3*f.voice_scale_s14 >> 18) + f.voice_DC;
 
   // Enable filter on/off.
   // This is not really part of SID, but is useful for testing.
