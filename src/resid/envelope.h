@@ -53,7 +53,7 @@ public:
   reg8 readENV();
 
   // 8-bit envelope output.
-  short output();
+  short output() const;
 
 protected:
   void set_exponential_counter();
@@ -375,7 +375,7 @@ void EnvelopeGenerator::state_change()
 // Read the envelope generator output.
 // ----------------------------------------------------------------------------
 RESID_INLINE
-short EnvelopeGenerator::output()
+short EnvelopeGenerator::output() const
 {
   // DAC imperfections are emulated by using envelope_counter as an index
   // into a DAC lookup table. readENV() uses envelope_counter directly.

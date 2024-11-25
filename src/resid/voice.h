@@ -37,18 +37,22 @@ public:
   void reset();
 
   void writeCONTROL_REG(reg8);
-
+#if 0
   // Amplitude modulated waveform output.
   // Range [-2048*255, 2047*255].
   int output();
-
+#endif
   WaveformGenerator wave;
   EnvelopeGenerator envelope;
 
+  inline int wav_output() const { return wave.output(); }
+
+  inline int env_output() const { return envelope.output(); }
+#if 0
 protected:
   // Waveform D/A zero level.
   short wave_zero;
-
+#endif
 friend class SID;
 };
 
@@ -94,13 +98,14 @@ friend class SID;
 // As is the case with all MOS 6581 DACs, the termination to (virtual) ground
 // at bit 0 is missing. The MOS 8580 has correct termination.
 //
-
+#if 0
 RESID_INLINE
 int Voice::output()
 {
   // Multiply oscillator output with envelope output.
   return (wave.output() - wave_zero)*envelope.output();
 }
+#endif
 
 #endif // RESID_INLINING || defined(RESID_VOICE_CC)
 

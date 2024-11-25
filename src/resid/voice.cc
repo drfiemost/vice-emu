@@ -39,7 +39,7 @@ void Voice::set_chip_model(chip_model model)
 {
   wave.set_chip_model(model);
   envelope.set_chip_model(model);
-
+#if 0
   if (model == MOS6581) {
     // The waveform D/A converter introduces a DC offset in the signal
     // to the envelope multiplying D/A converter. The "zero" level of
@@ -96,6 +96,7 @@ void Voice::set_chip_model(chip_model model)
     // No DC offsets in the MOS8580.
     wave_zero = 0x9e0;
   }
+#endif
 }
 
 // ----------------------------------------------------------------------------

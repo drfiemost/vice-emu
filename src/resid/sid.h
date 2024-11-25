@@ -224,9 +224,9 @@ void SID::clock()
 
   // Clock filter.
   Filter::voices_t v;
-  v.voice1 = voice[0].output();
-  v.voice2 = voice[1].output();
-  v.voice3 = voice[2].output();
+  v.voice1 = voice[0].wav_output() * voice[0].env_output();
+  v.voice2 = voice[1].wav_output() * voice[1].env_output();
+  v.voice3 = voice[2].wav_output() * voice[2].env_output();
   filter.clock(v);
 
   // Clock external filter.
