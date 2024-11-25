@@ -531,6 +531,9 @@ public:
         int voice1;
         int voice2;
         int voice3;
+        short env1;
+        short env2;
+        short env3;
     } voices_t;
 
 public:
@@ -627,6 +630,8 @@ protected:
     unsigned short mixer[mixer_offset<8>::value];
     // Cutoff frequency DAC output voltage table. FC is an 11 bit register.
     unsigned short f0_dac[1 << 11];
+    // DC drift based on envelope value
+    int dc_drift[256];
   } model_filter_t;
 
   // 6581 only
@@ -674,9 +679,9 @@ void Filter::clock(voices_t v)
 {
   model_filter_t& f = model_filter[sid_model];
 
-  v1 = (v.voice1*f.voice_scale_s14 >> 18) + f.voice_DC;
-  v2 = (v.voice2*f.voice_scale_s14 >> 18) + f.voice_DC;
-  v3 = (v.voice3*f.voice_scale_s14 >> 18) + f.voice_DC;
+  v1 = (v.voice1*f.voice_scale_s14 >> 18) + f.voice_DC + f.dc_drift[v.env1];
+  v2 = (v.voice2*f.voice_scale_s14 >> 18) + f.voice_DC + f.dc_drift[v.env2];
+  v3 = (v.voice3*f.voice_scale_s14 >> 18) + f.voice_DC + f.dc_drift[v.env3];
 
   // Sum inputs routed into the filter.
   int Vi = 0;
@@ -775,9 +780,9 @@ void Filter::clock(cycle_count delta_t, voices_t v)
 {
   model_filter_t& f = model_filter[sid_model];
 
-  v1 = (v.voice1*f.voice_scale_s14 >> 18) + f.voice_DC;
-  v2 = (v.voice2*f.voice_scale_s14 >> 18) + f.voice_DC;
-  v3 = (v.voice3*f.voice_scale_s14 >> 18) + f.voice_DC;
+  v1 = (v.voice1*f.voice_scale_s14 >> 18) + f.voice_DC + f.dc_drift[v.env1];
+  v2 = (v.voice2*f.voice_scale_s14 >> 18) + f.voice_DC + f.dc_drift[v.env2];
+  v3 = (v.voice3*f.voice_scale_s14 >> 18) + f.voice_DC + f.dc_drift[v.env3];
 
   // Enable filter on/off.
   // This is not really part of SID, but is useful for testing.

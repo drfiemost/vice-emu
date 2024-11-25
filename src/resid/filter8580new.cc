@@ -479,6 +479,13 @@ Filter::Filter()
           mf.f0_dac[n] = (unsigned short)(N16*(fi.dac_zero + mf.f0_dac[n]*fi.dac_scale/(1 << dac_bits) - vmin) + 0.5);
         }
 
+        // DC drift
+        unsigned short env_dac[256];
+        build_dac_table(env_dac, 8, 2.20, false);
+        for (int i=0; i<256; i++) {
+            mf.dc_drift[i] = int(N16 * 0.2143 * env_dac[i] / 256.);
+        }
+
         // VCR table.
         double k = fi.k;
         double kVddt = N16*(k*(fi.Vdd - fi.Vth));
@@ -617,6 +624,11 @@ Filter::Filter()
             }
           }
           mf.f0_dac[n] = wl >> 8;
+        }
+
+        for (int i=0; i<256; i++) {
+            // No DC drift for the 8580
+            mf.dc_drift[i] = 0;
         }
       }
     }
