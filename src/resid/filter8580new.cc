@@ -485,7 +485,7 @@ Filter::Filter()
         unsigned short env_dac[256];
         build_dac_table(env_dac, 8, 2.20, false);
         for (int i=0; i<256; i++) {
-            mf.voice_DC[i] = int(N16 * (voice_DC_base + 0.2143 * env_dac[i] / 256.));
+            mf.voice_DC[i] = (int)(N16 * (voice_DC_base + 0.2143 * env_dac[i] / 256.));
         }
 
         // VCR table.

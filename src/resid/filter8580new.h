@@ -629,7 +629,7 @@ protected:
     unsigned short mixer[mixer_offset<8>::value];
     // Cutoff frequency DAC output voltage table. FC is an 11 bit register.
     unsigned short f0_dac[1 << 11];
-    // DC drift based on envelope value
+    // Voice DC level based on envelope value
     int voice_DC[256];
   } model_filter_t;
 
