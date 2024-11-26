@@ -531,9 +531,9 @@ public:
         int voice1;
         int voice2;
         int voice3;
-        short env1;
-        short env2;
-        short env3;
+        unsigned short env1;
+        unsigned short env2;
+        unsigned short env3;
     } voices_t;
 
 public:

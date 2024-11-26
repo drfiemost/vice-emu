@@ -47,7 +47,7 @@ public:
 
   inline short wav_output() const { return wave.output() - 0x7ff; }
 
-  inline short env_output() const { return envelope.output(); }
+  inline unsigned short env_output() const { return envelope.output(); }
 #if 0
 protected:
   // Waveform D/A zero level.

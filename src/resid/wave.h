@@ -54,7 +54,7 @@ public:
   reg8 readOSC();
 
   // 12-bit waveform output.
-  short output() const;
+  unsigned short output() const;
 
   // Calculate and set waveform output value.
   void set_waveform_output();
@@ -585,7 +585,7 @@ void WaveformGenerator::set_waveform_output(cycle_count delta_t)
 //
 
 RESID_INLINE
-short WaveformGenerator::output() const
+unsigned short WaveformGenerator::output() const
 {
   // DAC imperfections are emulated by using waveform_output as an index
   // into a DAC lookup table. readOSC() uses waveform_output directly.
