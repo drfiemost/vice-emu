@@ -290,7 +290,7 @@ Filter::Filter()
       // for multiplication which fits in 11 bits.
       double N14 = norm*(1u << 14);
       mf.voice_scale_s14 = (int)(N14*fi.voice_voltage_range);
-      mf.voice_DC = (int)(N16*(fi.voice_DC_voltage - vmin));
+      const double voice_DC_base = fi.voice_DC_voltage - vmin;
 
       // Vdd - Vth, normalized so that translated values can be subtracted:
       // k*Vddt - x = (k*Vddt - t) - (x - t)
@@ -480,10 +480,12 @@ Filter::Filter()
         }
 
         // DC drift
+        // On 6581 the DC offset varies between ~5.0V and ~5.214V depending on
+        // the envelope value.
         unsigned short env_dac[256];
         build_dac_table(env_dac, 8, 2.20, false);
         for (int i=0; i<256; i++) {
-            mf.dc_drift[i] = int(N16 * 0.2143 * env_dac[i] / 256.);
+            mf.voice_DC[i] = int(N16 * (voice_DC_base + 0.2143 * env_dac[i] / 256.));
         }
 
         // VCR table.
@@ -628,7 +630,7 @@ Filter::Filter()
 
         for (int i=0; i<256; i++) {
             // No DC drift for the 8580
-            mf.dc_drift[i] = 0;
+            mf.voice_DC[i] = (int)(N16 * voice_DC_base);
         }
       }
     }
