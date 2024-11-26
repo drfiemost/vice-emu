@@ -173,6 +173,18 @@ public:
   short* fir;
 
   bool raw_debug_output; // FIXME: should be private?
+
+private:
+  inline Filter::voices_t getVoices() const {
+    Filter::voices_t v;
+    v.voice1 = voice[0].wav_output() * voice[0].env_output();
+    v.voice2 = voice[1].wav_output() * voice[1].env_output();
+    v.voice3 = voice[2].wav_output() * voice[2].env_output();
+    v.env1 = voice[0].env_output();
+    v.env2 = voice[1].env_output();
+    v.env3 = voice[2].env_output();
+    return v;
+  }
 };
 
 
@@ -223,14 +235,7 @@ void SID::clock()
   }
 
   // Clock filter.
-  Filter::voices_t v;
-  v.voice1 = voice[0].wav_output() * voice[0].env_output();
-  v.voice2 = voice[1].wav_output() * voice[1].env_output();
-  v.voice3 = voice[2].wav_output() * voice[2].env_output();
-  v.env1 = voice[0].env_output();
-  v.env2 = voice[1].env_output();
-  v.env3 = voice[2].env_output();
-  filter.clock(v);
+  filter.clock(getVoices());
 
   // Clock external filter.
   extfilt.clock(filter.output());

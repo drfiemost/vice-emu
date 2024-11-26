@@ -825,14 +825,7 @@ void SID::clock(cycle_count delta_t)
   }
 
   // Clock filter.
-  Filter::voices_t v;
-  v.voice1 = voice[0].wav_output() * voice[0].env_output();
-  v.voice2 = voice[1].wav_output() * voice[1].env_output();
-  v.voice3 = voice[2].wav_output() * voice[2].env_output();
-  v.env1 = voice[0].env_output();
-  v.env2 = voice[1].env_output();
-  v.env3 = voice[2].env_output();
-  filter.clock(delta_t, v);
+  filter.clock(delta_t, getVoices());
 
   // Clock external filter.
   extfilt.clock(delta_t, filter.output());

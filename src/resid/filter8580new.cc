@@ -629,7 +629,7 @@ Filter::Filter()
         }
 
         for (int i=0; i<256; i++) {
-            // No DC drift for the 8580
+            // Constant DC for the 8580
             mf.voice_DC[i] = (int)(N16 * voice_DC_base);
         }
       }
